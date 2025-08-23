@@ -92,12 +92,12 @@ function runSelfTests() {
 
 // DnD Combat Tracker — single-file React component
 // Works on tablets & laptops. Data persists in localStorage.
-// Features: add PCs/enemies, HP editing with damage/heal (non-PC only), initiative sorting, tie roll-offs (manual + auto), turn tracker,
-// hide from turn order, auto-graveyard at 0 HP (non-PC only), graveyard tab, notes, labeled inputs, themes, hover affordances, and undo toast.
+// Features: add PCs/enemies, HP editing with damage/heal (non-Player only), initiative sorting, tie roll-offs (manual + auto), turn tracker,
+// hide from turn order, auto-graveyard at 0 HP (non-Player only), graveyard tab, notes, labeled inputs, themes, hover affordances, and undo toast.
 export default function CombatTracker() {
   // --- Add form state ---
   const [name, setName] = useState("");
-  const [team, setTeam] = useState("PC");
+  const [team, setTeam] = useState("Player");
   const [hp, setHp] = useState(30);
   const [maxHp, setMaxHp] = useState(30);
   const [init, setInit] = useState(10);
@@ -188,7 +188,7 @@ export default function CombatTracker() {
 
   const resetForm = () => {
     setName("");
-    setTeam("PC");
+    setTeam("Player");
     setHp(30);
     setMaxHp(30);
     setInit(10);
@@ -198,7 +198,7 @@ export default function CombatTracker() {
   const addCombatant = () => {
     if (!name.trim()) return;
     const id = uid();
-    const isPC = team === "PC";
+    const isPC = team === "Player";
     const c = {
       id,
       name: name.trim(),
@@ -299,14 +299,14 @@ export default function CombatTracker() {
   // --- HP change helpers with Auto-Graveyard support ---
   const autoGrave = (next) => {
     if (!settings.autoGraveyard) return next;
-    const toMove = next.filter((c) => c.team !== "PC" && typeof c.hp === "number" && c.hp <= 0);
+    const toMove = next.filter((c) => c.team !== "Player" && typeof c.hp === "number" && c.hp <= 0);
     if (toMove.length === 0) return next;
     const prevGY = graveyard;
     setGraveyard((g) => [
       ...toMove.map((c) => ({ ...c, removedAt: Date.now() })),
       ...g,
     ]);
-    const remaining = next.filter((c) => !(c.team !== "PC" && typeof c.hp === "number" && c.hp <= 0));
+    const remaining = next.filter((c) => !(c.team !== "Player" && typeof c.hp === "number" && c.hp <= 0));
     ensureActiveValid(remaining);
     showToast(`Auto-moved ${toMove.length} to Graveyard`, () => setGraveyard(prevGY));
     return remaining;
@@ -316,7 +316,7 @@ export default function CombatTracker() {
     setCombatants((prev) => {
       const mapped = prev.map((c) => {
         if (c.id !== id) return c;
-        if (c.team === "PC" || typeof c.hp !== "number") return c; // PCs don't track HP here
+        if (c.team === "Player" || typeof c.hp !== "number") return c; // Players don't track HP here
         return applyDamagePure(c, amount);
       });
       const after = autoGrave(mapped);
@@ -327,7 +327,7 @@ export default function CombatTracker() {
   const applyHeal = (id, amount) => {
     setCombatants((prev) => prev.map((c) => {
       if (c.id !== id) return c;
-      if (c.team === "PC" || typeof c.hp !== "number") return c; // PCs don't track HP here
+      if (c.team === "Player" || typeof c.hp !== "number") return c; // Players don't track HP here
       return applyHealPure(c, amount);
     }));
   };
@@ -337,7 +337,7 @@ export default function CombatTracker() {
     setCombatants((prev) => {
       const mapped = prev.map((c) => {
         if (c.id !== id) return c;
-        if (c.team === "PC" || typeof c.hp !== "number") return c;
+        if (c.team === "Player" || typeof c.hp !== "number") return c;
         const hpVal = clamp(val, -9999, c.maxHp);
         return { ...c, hp: hpVal, down: hpVal <= 0 };
       });
@@ -417,10 +417,10 @@ export default function CombatTracker() {
 
   const addSample = () => {
     const now = Date.now();
-    const mk = (i, s) => ({ id: uid(), createdAt: now + i, tie: null, hidden: false, down: s.team === "PC" ? false : s.hp <= 0, ...s });
+    const mk = (i, s) => ({ id: uid(), createdAt: now + i, tie: null, hidden: false, down: s.team === "Player" ? false : s.hp <= 0, ...s });
     const samples = [
-      mk(1, { name: "Aelar", team: "PC", hp: null, maxHp: null, init: 15, notes: "Elf ranger" }),
-      mk(2, { name: "Cleric", team: "PC", hp: null, maxHp: null, init: 12, notes: "Bless ready" }),
+      mk(1, { name: "Aelar", team: "Player", hp: null, maxHp: null, init: 15, notes: "Elf ranger" }),
+      mk(2, { name: "Cleric", team: "Player", hp: null, maxHp: null, init: 12, notes: "Bless ready" }),
       mk(3, { name: "Bandit 1", team: "Enemy", hp: 11, maxHp: 11, init: 14, notes: "Scimitar" }),
       mk(4, { name: "Bandit 2", team: "Enemy", hp: 11, maxHp: 11, init: 8, notes: "Crossbow" }),
     ];
@@ -593,14 +593,14 @@ export default function CombatTracker() {
               <label className="flex flex-col">
                 <span className="text-xs font-semibold mb-1 text-neutral-300">Team</span>
                 <select className="border border-neutral-700 bg-neutral-900 text-neutral-100 rounded-xl px-3 py-2" value={team} onChange={(e) => setTeam(e.target.value)}>
-                  <option>PC</option>
+                  <option>Player</option>
                   <option>Enemy</option>
                   <option>Ally</option>
                   <option>Neutral</option>
                 </select>
               </label>
 
-              {team !== "PC" && (
+              {team !== "Player" && (
                 <>
                   <label className="flex flex-col">
                     <span className="text-xs font-semibold mb-1 text-neutral-300">Current HP</span>
@@ -659,7 +659,7 @@ export default function CombatTracker() {
                   )}
                   {listForDisplay.map((c) => {
                     const isActive = c.id === activeId;
-                    const isPC = c.team === "PC";
+                    const isPC = c.team === "Player";
                     const hpPct = !isPC && typeof c.maxHp === "number" && c.maxHp > 0
                       ? Math.max(0, Math.min(100, Math.round((c.hp / c.maxHp) * 100)))
                       : 0;
@@ -693,7 +693,7 @@ export default function CombatTracker() {
                         <td className="px-3 py-3">
                           <div className="font-semibold flex items-center gap-2 flex-wrap">
                             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs border ${
-                              c.team === "PC" ? "bg-neutral-700 border-neutral-600" :
+                              c.team === "Player" ? "bg-neutral-700 border-neutral-600" :
                               c.team === "Enemy" ? "bg-rose-900/30 border-rose-800" :
                               c.team === "Ally" ? "bg-sky-900/30 border-sky-800" : "bg-neutral-700 border-neutral-600"
                             }`}>{c.team}</span>
@@ -798,7 +798,7 @@ export default function CombatTracker() {
 
         {/* Footer tips */}
         <footer className="text-xs text-neutral-400 text-center py-2">
-          Tip: PCs don't track HP here. Hidden are excluded from turn order (unless shown). Auto-Graveyard moves 0 HP (non-PC) to Graveyard. Use 🎲 or the (+) field to resolve ties. Hidden rows appear light blue when shown. Downed entries show a red tag.
+          Tip: Players don't track HP here. Hidden are excluded from turn order (unless shown). Auto-Graveyard moves 0 HP (non-Player) to Graveyard. Use 🎲 or the (+) field to resolve ties. Hidden rows appear light blue when shown. Downed entries show a red tag.
         </footer>
       </div>
 
@@ -918,4 +918,5 @@ function EditableText({ value, onChange }) {
     </div>
   );
 }
+
 
